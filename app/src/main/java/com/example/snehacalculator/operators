@@ -1,0 +1,88 @@
+//              button_addition.setOnClickListener(view -> {
+//                String currentNumber = "";
+//                if (!currentNumber.contains("+")) {
+//                    currentNumber += "+"; // Update currentNumber
+//                    text_result.setText(text_result.getText().toString() + "+");
+//                }
+//            });
+
+button_subtraction.setOnClickListener(view -> {
+                String currentNumber = "";
+                if (!currentNumber.contains("-")) {
+                    currentNumber += "-"; // Update currentNumber
+                    text_result.setText(text_result.getText().toString() + "-");
+                }
+            });
+
+
+
+
+            button_multiply.setOnClickListener(view -> {
+                            String currentNumber = "";
+                            if (!currentNumber.contains("*")) {
+                                currentNumber += "*"; // Update currentNumber
+                                text_result.setText(text_result.getText().toString() + "*");
+                            }
+                        });
+
+
+
+
+                        button_multiply.setOnClickListener(view -> {
+                                        String currentNumber = "";
+                                        if (!currentNumber.contains("*")) {
+                                            currentNumber += "*"; // Update currentNumber
+                                            text_result.setText(text_result.getText().toString() + "*");
+                                        }
+                                    });
+
+
+
+                    button_modulo.setOnClickListener(view -> {
+                                    String currentNumber = "";
+                                    if (!currentNumber.contains("%")) {
+                                        currentNumber += "%"; // Update currentNumber
+                                        text_result.setText(text_result.getText().toString() + "%");
+
+                                    }
+                                });
+
+
+
+
+
+//        button_equals.setOnClickListener(view -> {
+//            try {
+//                String expression = text_result.getText().toString();
+//
+//                // Input validation (optional): You can add more checks here
+//                if (expression.isEmpty() || expression.endsWith("+") || expression.endsWith("-") || expression.endsWith("*") || expression.endsWith("/") || expression.endsWith(".")) {
+//                    text_result.setText("Error");
+//                    return;
+//                }
+//                double result = eval(expression); // Replace with your evaluation logic
+//                DecimalFormat df = new DecimalFormat("#.##"); // Use "#.##" to format with up to 2 decimal places
+//
+//                String formattedResult = df.format(result);
+//                if (formattedResult.endsWith(".00")) {
+//                    formattedResult = formattedResult.substring(0, formattedResult.length() - 3); // Remove ".00"
+//                } else if (formattedResult.endsWith(".0")) {
+//                    formattedResult = formattedResult.substring(0, formattedResult.length() - 2); // Remove ".0"
+//                }
+//                text_result.setText(formattedResult);
+//
+//                // Reset currentNumber after calculation
+//                String currentNumber = "";
+//
+//            } catch (Exception e) {
+//                text_result.setText("Error");
+//            }
+//        });
+//
+//    }
+//
+//    private double eval(String expression) {
+//        return 0;
+//    }
+//    }
+

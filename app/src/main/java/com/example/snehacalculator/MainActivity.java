@@ -16,6 +16,7 @@ import androidx.core.view.WindowInsetsCompat;
 import com.google.android.material.button.MaterialButton;
 
 import java.util.ArrayList;
+import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -29,16 +30,20 @@ public class MainActivity extends AppCompatActivity {
     Vibrator vibrator;
 
     private int lcm(int a, int b) {
-        int gcd = hcf(a, b); // Calculate HCF first
-        return (a * b) / gcd;
+        if (a == 0 || b == 0) return 0;
+        int gcd = hcf(a, b);
+        return Math.abs((a * b) / gcd);
     }
 
     private int hcf(int a, int b) {
-        if (b == 0) {
-            return a;
+        while (b != 0) {
+            int temp = b;
+            b = a % b;
+            a = temp;
         }
-        return hcf(b, a % b);
+        return Math.abs(a);
     }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -118,7 +123,14 @@ public class MainActivity extends AppCompatActivity {
 
         for (MaterialButton b : operators) {
             b.setOnClickListener(view -> {
-                text_result.append(b.getText().toString());
+                String currentText = text_result.getText().toString();
+                // Prevent adding operator if it's the last character and already an operator
+                if (!currentText.isEmpty() && isOperator(currentText.charAt(currentText.length() - 1))) {
+                    // Replace the last operator with the new one
+                    text_result.setText(currentText.substring(0, currentText.length() - 1) + b.getText().toString());
+                } else {
+                    text_result.append(b.getText().toString());
+                }
                 vibrateDevice();
             });
         }
@@ -142,32 +154,76 @@ public class MainActivity extends AppCompatActivity {
         // Set OnClickListener for dot button
         button_dot.setOnClickListener(view -> {
             String currentText = text_result.getText().toString();
-            // Prevent multiple dots in a single number
-            Pattern pattern = Pattern.compile("[+\\-*/%]");
-            String[] parts = pattern.split(currentText);
-            String lastPart = parts[parts.length - 1];
+            // Check if the last number segment already contains a dot
+            int lastOperatorIndex = Math.max(Math.max(currentText.lastIndexOf('+'), currentText.lastIndexOf('-')),
+                    Math.max(currentText.lastIndexOf('*'), Math.max(currentText.lastIndexOf('/'), currentText.lastIndexOf('%'))));
+            int lastBracketIndex = Math.max(currentText.lastIndexOf('('), currentText.lastIndexOf(')'));
 
-            if (!lastPart.contains(".")) {
-                text_result.append(".");
+            // Get the segment of the number currently being typed
+            String currentNumberSegment;
+            if (lastOperatorIndex > lastBracketIndex) { // Last token was an operator
+                currentNumberSegment = currentText.substring(lastOperatorIndex + 1);
+            } else if (lastBracketIndex > lastOperatorIndex && currentText.charAt(lastBracketIndex) == '(') { // Last token was an open bracket
+                currentNumberSegment = currentText.substring(lastBracketIndex + 1);
+            } else { // No operator or bracket, or last was a closing bracket
+                currentNumberSegment = currentText;
+            }
+
+
+            if (!currentNumberSegment.contains(".")) {
+                if (currentNumberSegment.isEmpty() || isOperator(currentNumberSegment.charAt(currentNumberSegment.length() - 1))) {
+                    text_result.append("0."); // Start with "0." if adding dot at the beginning of a number
+                } else {
+                    text_result.append(".");
+                }
             }
             vibrateDevice();
         });
 
         // Set OnClickListener for comma button (primarily for HCF/LCM input)
         button_comma.setOnClickListener(view -> {
-            text_result.append(",");
+            // Only allow comma if it's not already present in the current input for HCF/LCM
+            String currentText = text_result.getText().toString();
+            if (!currentText.contains(",")) {
+                text_result.append(",");
+            }
             vibrateDevice();
         });
 
         // Set OnClickListener for open bracket button
         button_openbtackets.setOnClickListener(view -> {
+            String currentText = text_result.getText().toString();
+            if (!currentText.equals("0") && !currentText.isEmpty()) {
+                char lastChar = currentText.charAt(currentText.length() - 1);
+                if (Character.isDigit(lastChar) || lastChar == '.') {
+                    text_result.setText("Error: Misplaced parenthesis");
+                    vibrateDevice();
+                    return;
+                }
+            }
             text_result.append("(");
             vibrateDevice();
         });
 
         // Set OnClickListener for close bracket button
         button_closebrackets.setOnClickListener(view -> {
-            text_result.append(")");
+            String currentText = text_result.getText().toString();
+            int openBrackets = countChar(currentText, '(');
+            int closeBrackets = countChar(currentText, ')');
+
+            if (openBrackets > closeBrackets) {
+                if (!currentText.isEmpty()) {
+                    char lastChar = currentText.charAt(currentText.length() - 1);
+                    if (isOperator(lastChar) || lastChar == '(') {
+                        text_result.setText("Error: Misplaced parenthesis");
+                        vibrateDevice();
+                        return;
+                    }
+                }
+                text_result.append(")");
+            } else {
+                text_result.setText("Error: Unmatched parenthesis");
+            }
             vibrateDevice();
         });
 
@@ -182,7 +238,7 @@ public class MainActivity extends AppCompatActivity {
                     int result = lcm(num1, num2);
                     text_result.setText(String.valueOf(result));
                 } else {
-                    text_result.setText("Error: Invalid input for LCM (e.g., 10,15)");
+                    text_result.setText("Error: LCM needs 2 numbers (e.g., 10,15)");
                 }
             } catch (NumberFormatException e) {
                 text_result.setText("Error: Invalid number format for LCM");
@@ -201,7 +257,7 @@ public class MainActivity extends AppCompatActivity {
                     int result = hcf(num1, num2);
                     text_result.setText(String.valueOf(result));
                 } else {
-                    text_result.setText("Error: Invalid input for HCF (e.g., 10,15)");
+                    text_result.setText("Error: HCF needs 2 numbers (e.g., 10,15)");
                 }
             } catch (NumberFormatException e) {
                 text_result.setText("Error: Invalid number format for HCF");
@@ -214,14 +270,22 @@ public class MainActivity extends AppCompatActivity {
             vibrateDevice();
             try {
                 String expression = text_result.getText().toString();
-                if (expression.isEmpty()) {
+                if (expression.isEmpty() || expression.equals("Error")) {
                     text_result.setText("0");
+                    return;
+                }
+
+                // Basic validation for unmatched parentheses before evaluation
+                if (countChar(expression, '(') != countChar(expression, ')')) {
+                    text_result.setText("Error: Unmatched parenthesis");
                     return;
                 }
 
                 double result = evaluateExpression(expression);
 
-                if (String.valueOf(result).endsWith(".0")) {
+                if (Double.isInfinite(result) || Double.isNaN(result)) {
+                    text_result.setText("Error");
+                } else if (String.valueOf(result).endsWith(".0")) {
                     text_result.setText(String.valueOf((long) result));
                 } else {
                     text_result.setText(String.valueOf(result));
@@ -245,75 +309,135 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // A simple expression evaluator (handles +, -, *, /, %)
+    // Helper to check if a character is an operator
+    private boolean isOperator(char c) {
+        return c == '+' || c == '-' || c == '*' || c == '/' || c == '%';
+    }
+
+    // Helper to count character occurrences
+    private int countChar(String str, char c) {
+        int count = 0;
+        for (int i = 0; i < str.length(); i++) {
+            if (str.charAt(i) == c) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    // New and improved evaluateExpression method to handle parentheses and proper operator precedence
     private double evaluateExpression(String expression) throws Exception {
         // Remove spaces for easier parsing
         expression = expression.replaceAll(" ", "");
 
-        // Regular expression to split numbers and operators, keeping operators
-        Pattern pattern = Pattern.compile("(?<=[0-9.])(?=[+\\-*/%])|(?<=[+\\-*/%])(?=[0-9.])");
-        String[] tokens = pattern.split(expression);
+        Stack<Double> numbers = new Stack<>();
+        Stack<Character> operators = new Stack<>();
 
-        if (tokens.length == 0) {
-            throw new IllegalArgumentException("Empty expression");
-        }
+        for (int i = 0; i < expression.length(); i++) {
+            char c = expression.charAt(i);
 
-        // Use ArrayLists for mutable lists of numbers and operators
-        ArrayList<Double> numbers = new ArrayList<>();
-        ArrayList<String> operators = new ArrayList<>();
-
-        // Populate numbers and operators lists
-        for (String token : tokens) {
-            if (token.isEmpty()) continue;
-            try {
-                numbers.add(Double.parseDouble(token));
-            } catch (NumberFormatException e) {
-                operators.add(token);
-            }
-        }
-
-        // Perform multiplication and division first
-        for (int i = 0; i < operators.size(); i++) {
-            String op = operators.get(i);
-            if (op.equals("*") || op.equals("/") || op.equals("%")) {
-                double num1 = numbers.get(i);
-                double num2 = numbers.get(i + 1);
-                double result = 0;
-
-                switch (op) {
-                    case "*":
-                        result = num1 * num2;
-                        break;
-                    case "/":
-                        if (num2 == 0) throw new ArithmeticException("Division by zero");
-                        result = num1 / num2;
-                        break;
-                    case "%":
-                        result = num1 % num2;
-                        break;
+            if (Character.isDigit(c) || c == '.') {
+                StringBuilder sb = new StringBuilder();
+                while (i < expression.length() && (Character.isDigit(expression.charAt(i)) || expression.charAt(i) == '.')) {
+                    sb.append(expression.charAt(i));
+                    i++;
                 }
-                numbers.set(i, result);
-                numbers.remove(i + 1);
-                operators.remove(i);
-                i--; // Adjust index after removal
+                i--; // Decrement i because it will be incremented in the for loop
+                numbers.push(Double.parseDouble(sb.toString()));
+            } else if (c == '(') {
+                operators.push(c);
+            } else if (c == ')') {
+                while (!operators.isEmpty() && operators.peek() != '(') {
+                    performOperation(numbers, operators);
+                }
+                if (!operators.isEmpty()) {
+                    operators.pop(); // Pop the '('
+                } else {
+                    throw new IllegalArgumentException("Mismatched parentheses");
+                }
+            } else if (isOperator(c)) {
+                // Handle negative numbers at the start or after an open parenthesis
+                if (c == '-' && (i == 0 || expression.charAt(i - 1) == '(')) {
+                    // Check if the next character is a digit
+                    if (i + 1 < expression.length() && Character.isDigit(expression.charAt(i + 1))) {
+                        StringBuilder sb = new StringBuilder("-");
+                        i++; // Move past the '-'
+                        while (i < expression.length() && (Character.isDigit(expression.charAt(i)) || expression.charAt(i) == '.')) {
+                            sb.append(expression.charAt(i));
+                            i++;
+                        }
+                        i--; // Adjust i for the outer loop
+                        numbers.push(Double.parseDouble(sb.toString()));
+                        continue; // Continue to next iteration of for loop
+                    }
+                }
+
+                while (!operators.isEmpty() && hasPrecedence(c, operators.peek())) {
+                    performOperation(numbers, operators);
+                }
+                operators.push(c);
+            } else {
+                throw new IllegalArgumentException("Invalid character in expression: " + c);
             }
         }
 
-        // Perform addition and subtraction
-        double finalResult = numbers.get(0);
-        for (int i = 0; i < operators.size(); i++) {
-            String op = operators.get(i);
-            double num = numbers.get(i + 1);
-
-            switch (op) {
-                case "+":
-                    finalResult += num;
-                    break;
-                case "-":
-                    finalResult -= num;
-                    break;
+        while (!operators.isEmpty()) {
+            if (operators.peek() == '(') {
+                throw new IllegalArgumentException("Mismatched parentheses");
             }
+            performOperation(numbers, operators);
         }
-        return finalResult;
+
+        if (numbers.size() != 1 || !operators.isEmpty()) {
+            throw new IllegalArgumentException("Invalid expression format");
+        }
+
+        return numbers.pop();
+    }
+
+    // Determines operator precedence
+    private boolean hasPrecedence(char op1, char op2) {
+        if (op2 == '(' || op2 == ')') {
+            return false;
+        }
+        // Multiplication, Division, Modulo have higher precedence
+        if ((op1 == '*' || op1 == '/' || op1 == '%') && (op2 == '+' || op2 == '-')) {
+            return false;
+        }
+        return true; // op1 has lower or equal precedence, or same precedence (e.g., + and -)
+    }
+
+    // Performs the operation based on the operator popped from the stack
+    private void performOperation(Stack<Double> numbers, Stack<Character> operators) {
+        if (numbers.size() < 2 || operators.isEmpty()) {
+            throw new IllegalArgumentException("Invalid expression");
+        }
+        char operator = operators.pop();
+        double b = numbers.pop();
+        double a = numbers.pop();
+        double result;
+
+        switch (operator) {
+            case '+':
+                result = a + b;
+                break;
+            case '-':
+                result = a - b;
+                break;
+            case '*':
+                result = a * b;
+                break;
+            case '/':
+                if (b == 0) throw new ArithmeticException("Division by zero");
+                result = a / b;
+                break;
+            case '%':
+                if (b == 0) throw new ArithmeticException("Modulo by zero");
+                result = a % b;
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown operator: " + operator);
+        }
+        numbers.push(result);
     }
 }

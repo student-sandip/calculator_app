@@ -30,7 +30,7 @@ public class MainActivity extends AppCompatActivity {
     Vibrator vibrator;
 
     private int lcm(int a, int b) {
-        if (a == 0 || b == 0) return 0;
+        if (a == 0 || b == 0) return 0; // LCM of 0 and any number is 0
         int gcd = hcf(a, b);
         return Math.abs((a * b) / gcd);
     }
@@ -41,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
             b = a % b;
             a = temp;
         }
-        return Math.abs(a);
+        return Math.abs(a); // Ensure positive HCF
     }
 
 
@@ -104,7 +104,8 @@ public class MainActivity extends AppCompatActivity {
 
         for (MaterialButton b : nums) {
             b.setOnClickListener(view -> {
-                if (text_result.getText().toString().equals("0") || text_result.getText().toString().equals("Error")) {
+                String currentText = text_result.getText().toString();
+                if (currentText.equals("0") || currentText.equals("Error")) {
                     text_result.setText(b.getText().toString());
                 } else {
                     text_result.append(b.getText().toString());
@@ -128,7 +129,10 @@ public class MainActivity extends AppCompatActivity {
                 if (!currentText.isEmpty() && isOperator(currentText.charAt(currentText.length() - 1))) {
                     // Replace the last operator with the new one
                     text_result.setText(currentText.substring(0, currentText.length() - 1) + b.getText().toString());
-                } else {
+                } else if (currentText.equals("0") && b.getText().toString().equals("-")) { // Allow leading negative sign
+                    text_result.setText("-");
+                }
+                else {
                     text_result.append(b.getText().toString());
                 }
                 vibrateDevice();
@@ -138,15 +142,15 @@ public class MainActivity extends AppCompatActivity {
         // Set OnClickListener for C (Clear last character) button
         button_c.setOnClickListener(view -> {
             String s = text_result.getText().toString();
-            if (s.length() > 0 && !s.equals("0")) {
+            if (s.length() > 0 && !s.equals("0") && !s.equals("Error")) { // Also clear error message
                 s = s.substring(0, s.length() - 1);
-                if (s.isEmpty()) {
+                if (s.isEmpty() || s.equals("-")) { // If only '-' left, turn to '0'
                     text_result.setText("0");
                 } else {
                     text_result.setText(s);
                 }
             } else if (s.equals("Error")) {
-                text_result.setText("0");
+                text_result.setText("0"); // Clear error to 0
             }
             vibrateDevice();
         });
@@ -154,25 +158,34 @@ public class MainActivity extends AppCompatActivity {
         // Set OnClickListener for dot button
         button_dot.setOnClickListener(view -> {
             String currentText = text_result.getText().toString();
-            // Check if the last number segment already contains a dot
-            int lastOperatorIndex = Math.max(Math.max(currentText.lastIndexOf('+'), currentText.lastIndexOf('-')),
-                    Math.max(currentText.lastIndexOf('*'), Math.max(currentText.lastIndexOf('/'), currentText.lastIndexOf('%'))));
-            int lastBracketIndex = Math.max(currentText.lastIndexOf('('), currentText.lastIndexOf(')'));
+            // Check if the current segment of the number already contains a dot
+            // Find the last operator or parenthesis to determine the current number segment
+            int lastOperatorIndex = -1;
+            int lastParenIndex = -1;
+            for(int i = currentText.length() - 1; i >= 0; i--) {
+                char ch = currentText.charAt(i);
+                if (isOperator(ch)) {
+                    lastOperatorIndex = i;
+                    break;
+                }
+                if (ch == '(' || ch == ')') {
+                    lastParenIndex = i;
+                    break;
+                }
+            }
 
-            // Get the segment of the number currently being typed
             String currentNumberSegment;
-            if (lastOperatorIndex > lastBracketIndex) { // Last token was an operator
+            if (lastOperatorIndex != -1) {
                 currentNumberSegment = currentText.substring(lastOperatorIndex + 1);
-            } else if (lastBracketIndex > lastOperatorIndex && currentText.charAt(lastBracketIndex) == '(') { // Last token was an open bracket
-                currentNumberSegment = currentText.substring(lastBracketIndex + 1);
-            } else { // No operator or bracket, or last was a closing bracket
+            } else if (lastParenIndex != -1) {
+                currentNumberSegment = currentText.substring(lastParenIndex + 1);
+            } else {
                 currentNumberSegment = currentText;
             }
 
-
             if (!currentNumberSegment.contains(".")) {
-                if (currentNumberSegment.isEmpty() || isOperator(currentNumberSegment.charAt(currentNumberSegment.length() - 1))) {
-                    text_result.append("0."); // Start with "0." if adding dot at the beginning of a number
+                if (currentNumberSegment.isEmpty() || isOperator(currentText.charAt(currentText.length()-1)) || currentText.charAt(currentText.length()-1) == '(') {
+                    text_result.append("0."); // Start with "0." if adding dot at the beginning of a number (e.g., after operator or '(')
                 } else {
                     text_result.append(".");
                 }
@@ -190,18 +203,21 @@ public class MainActivity extends AppCompatActivity {
             vibrateDevice();
         });
 
-        // Set OnClickListener for open bracket button
+        // Fix for 0( error:
         button_openbtackets.setOnClickListener(view -> {
             String currentText = text_result.getText().toString();
-            if (!currentText.equals("0") && !currentText.isEmpty()) {
+            if (currentText.equals("0") || currentText.equals("Error")) {
+                text_result.setText("("); // If screen is "0" or "Error", replace it with "("
+            } else {
                 char lastChar = currentText.charAt(currentText.length() - 1);
+                // Prevent adding '(' directly after a digit or '.'
                 if (Character.isDigit(lastChar) || lastChar == '.') {
                     text_result.setText("Error: Misplaced parenthesis");
                     vibrateDevice();
                     return;
                 }
+                text_result.append("(");
             }
-            text_result.append("(");
             vibrateDevice();
         });
 
@@ -211,9 +227,11 @@ public class MainActivity extends AppCompatActivity {
             int openBrackets = countChar(currentText, '(');
             int closeBrackets = countChar(currentText, ')');
 
+            // Only allow ')' if there's an open bracket to close
             if (openBrackets > closeBrackets) {
                 if (!currentText.isEmpty()) {
                     char lastChar = currentText.charAt(currentText.length() - 1);
+                    // Prevent adding ')' directly after an operator or '('
                     if (isOperator(lastChar) || lastChar == '(') {
                         text_result.setText("Error: Misplaced parenthesis");
                         vibrateDevice();
@@ -270,7 +288,7 @@ public class MainActivity extends AppCompatActivity {
             vibrateDevice();
             try {
                 String expression = text_result.getText().toString();
-                if (expression.isEmpty() || expression.equals("Error")) {
+                if (expression.isEmpty() || expression.equals("Error") || expression.equals("0")) {
                     text_result.setText("0");
                     return;
                 }
@@ -280,6 +298,14 @@ public class MainActivity extends AppCompatActivity {
                     text_result.setText("Error: Unmatched parenthesis");
                     return;
                 }
+
+                // Also check if the expression ends with an operator or open bracket
+                char lastChar = expression.charAt(expression.length() - 1);
+                if (isOperator(lastChar) || lastChar == '(') {
+                    text_result.setText("Error: Incomplete expression");
+                    return;
+                }
+
 
                 double result = evaluateExpression(expression);
 
@@ -353,13 +379,13 @@ public class MainActivity extends AppCompatActivity {
                 if (!operators.isEmpty()) {
                     operators.pop(); // Pop the '('
                 } else {
-                    throw new IllegalArgumentException("Mismatched parentheses");
+                    throw new IllegalArgumentException("Mismatched or empty parentheses");
                 }
             } else if (isOperator(c)) {
-                // Handle negative numbers at the start or after an open parenthesis
-                if (c == '-' && (i == 0 || expression.charAt(i - 1) == '(')) {
-                    // Check if the next character is a digit
-                    if (i + 1 < expression.length() && Character.isDigit(expression.charAt(i + 1))) {
+                // Handle negative numbers at the start or after an open parenthesis or another operator
+                if (c == '-' && (i == 0 || expression.charAt(i - 1) == '(' || isOperator(expression.charAt(i-1)) )) {
+                    // Check if the next character is a digit or dot
+                    if (i + 1 < expression.length() && (Character.isDigit(expression.charAt(i + 1)) || expression.charAt(i+1) == '.')) {
                         StringBuilder sb = new StringBuilder("-");
                         i++; // Move past the '-'
                         while (i < expression.length() && (Character.isDigit(expression.charAt(i)) || expression.charAt(i) == '.')) {
@@ -383,13 +409,13 @@ public class MainActivity extends AppCompatActivity {
 
         while (!operators.isEmpty()) {
             if (operators.peek() == '(') {
-                throw new IllegalArgumentException("Mismatched parentheses");
+                throw new IllegalArgumentException("Unmatched opening parenthesis");
             }
             performOperation(numbers, operators);
         }
 
         if (numbers.size() != 1 || !operators.isEmpty()) {
-            throw new IllegalArgumentException("Invalid expression format");
+            throw new IllegalArgumentException("Invalid expression format or missing operand");
         }
 
         return numbers.pop();
@@ -398,19 +424,19 @@ public class MainActivity extends AppCompatActivity {
     // Determines operator precedence
     private boolean hasPrecedence(char op1, char op2) {
         if (op2 == '(' || op2 == ')') {
-            return false;
+            return false; // Parentheses on stack don't allow pushing without matching ')'
         }
         // Multiplication, Division, Modulo have higher precedence
         if ((op1 == '*' || op1 == '/' || op1 == '%') && (op2 == '+' || op2 == '-')) {
-            return false;
+            return false; // op1 is higher precedence, so op2 (on stack) should not be performed yet
         }
-        return true; // op1 has lower or equal precedence, or same precedence (e.g., + and -)
+        return true; // op1 has lower or equal precedence, so op2 (on stack) should be performed first
     }
 
     // Performs the operation based on the operator popped from the stack
     private void performOperation(Stack<Double> numbers, Stack<Character> operators) {
         if (numbers.size() < 2 || operators.isEmpty()) {
-            throw new IllegalArgumentException("Invalid expression");
+            throw new IllegalArgumentException("Invalid expression: Not enough operands or operator");
         }
         char operator = operators.pop();
         double b = numbers.pop();

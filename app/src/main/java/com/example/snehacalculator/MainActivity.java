@@ -142,24 +142,22 @@ public class MainActivity extends AppCompatActivity {
         // Set OnClickListener for C (Clear last character) button
         button_c.setOnClickListener(view -> {
             String s = text_result.getText().toString();
-            if (s.length() > 0 && !s.equals("0") && !s.equals("Error")) { // Also clear error message
+            if (s.length() > 0 && !s.equals("0") && !s.equals("Error")) {
                 s = s.substring(0, s.length() - 1);
-                if (s.isEmpty() || s.equals("-")) { // If only '-' left, turn to '0'
+                if (s.isEmpty() || s.equals("-")) {
                     text_result.setText("0");
                 } else {
                     text_result.setText(s);
                 }
             } else if (s.equals("Error")) {
-                text_result.setText("0"); // Clear error to 0
+                text_result.setText("0");
             }
             vibrateDevice();
         });
 
-        // Set OnClickListener for dot button
+
         button_dot.setOnClickListener(view -> {
             String currentText = text_result.getText().toString();
-            // Check if the current segment of the number already contains a dot
-            // Find the last operator or parenthesis to determine the current number segment
             int lastOperatorIndex = -1;
             int lastParenIndex = -1;
             for(int i = currentText.length() - 1; i >= 0; i--) {

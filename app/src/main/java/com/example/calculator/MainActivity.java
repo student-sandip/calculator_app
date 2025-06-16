@@ -2,10 +2,17 @@ package com.example.calculator;
 
 import static com.example.calculator.R.*;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
+import android.os.Build;
 import android.os.Vibrator;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.EditText;
+import android.widget.HorizontalScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -15,6 +22,7 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.button.MaterialButton;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Stack;
 
@@ -48,10 +56,35 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(layout.activity_main);
 
+        EditText editText = findViewById(R.id.text_result);
+        HorizontalScrollView scrollView = findViewById(R.id.horizontalScrollView);
+
+// Scroll to right when text is updated
+        editText.setText("0");
+        editText.setSelection(editText.getText().length());
+
+        scrollView.post(() -> scrollView.fullScroll(View.FOCUS_RIGHT));
+
+//        EditText editText = findViewById(R.id.text_result);
+
+// Disable keyboard (soft input)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            editText.setShowSoftInputOnFocus(false);
+        } else {
+            // For older devices
+            try {
+                Method method = EditText.class.getMethod("setShowSoftInputOnFocus", boolean.class);
+                method.setAccessible(true);
+                method.invoke(editText, false);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+
         vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
         text_result = findViewById(id.text_result);
 
-        // Initialize buttons
         button_ac = findViewById(id.button_ac);
         button_dot = findViewById(id.button_dot);
         button_c = findViewById(id.button_c);
@@ -83,13 +116,13 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
-        // Clear all
+
         button_ac.setOnClickListener(v -> {
             text_result.setText("0");
             vibrateDevice();
         });
 
-        // Digits
+
         ArrayList<MaterialButton> nums = new ArrayList<>();
         nums.add(button_0); nums.add(button_1); nums.add(button_2);
         nums.add(button_3); nums.add(button_4); nums.add(button_5);
@@ -125,7 +158,6 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
-        // Dot
         button_dot.setOnClickListener(v -> {
             String current = text_result.getText().toString();
             int lastOp = -1;
@@ -146,7 +178,7 @@ public class MainActivity extends AppCompatActivity {
             vibrateDevice();
         });
 
-        // Clear last
+
         button_c.setOnClickListener(v -> {
             String s = text_result.getText().toString();
             if (!s.equals("0") && !s.equals("Error")) {
@@ -158,7 +190,7 @@ public class MainActivity extends AppCompatActivity {
             vibrateDevice();
         });
 
-        // Brackets
+
         button_openbtackets.setOnClickListener(v -> {
             String t = text_result.getText().toString();
             if (t.equals("0") || t.equals("Error")) {
@@ -192,12 +224,11 @@ public class MainActivity extends AppCompatActivity {
             vibrateDevice();
         });
 
-        // Comma button: allow multiple commas
+
         button_comma.setOnClickListener(v -> {
             String t = text_result.getText().toString();
             char lastChar = t.charAt(t.length() - 1);
 
-            // Avoid duplicate commas in a row or starting with comma
             if (t.equals("0") || t.equals("Error")) {
                 text_result.setText("0,");
             } else if (lastChar != ',') {
@@ -208,11 +239,10 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
-        // LCM / HCF
+
         button_lcm.setOnClickListener(v -> handleLcmHcf(true));
         button_hcf.setOnClickListener(v -> handleLcmHcf(false));
 
-        // Equals
         button_equals.setOnClickListener(v -> {
             vibrateDevice();
             try {
@@ -272,7 +302,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void vibrateDevice() {
-        if (vibrator != null) vibrator.vibrate(80);
+        if (vibrator != null) vibrator.vibrate(50);
     }
 
     private boolean isOperator(char c) {

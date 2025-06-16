@@ -65,8 +65,6 @@ public class MainActivity extends AppCompatActivity {
 
         scrollView.post(() -> scrollView.fullScroll(View.FOCUS_RIGHT));
 
-//        EditText editText = findViewById(R.id.text_result);
-
 // Disable keyboard (soft input)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             editText.setShowSoftInputOnFocus(false);
